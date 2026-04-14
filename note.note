@@ -1,0 +1,872 @@
+Next.js 14 + TypeScript + Supabase + Tailwind
+第一部分：项目初始化
+
+Prompt 1.1 — 创建项目和安装依赖
+第一个运行。在终端执行，不是发给AI。
+ 
+ PROMPT — Copy and paste into VSCode AI assistant  
+You are helping me build BaysideClubs, a student organization management platform
+for Bayside High School in Queens, New York.
+ 
+Tech stack:
+- Next.js 14 with App Router
+- TypeScript (strict mode)
+- Supabase (PostgreSQL + Auth + Storage)
+- Tailwind CSS
+- Deployed on Vercel
+ 
+First, help me initialize the project. Run these commands in order:
+ 
+npx create-next-app@latest bayside-clubs \
+ --typescript \
+ --tailwind \
+ --eslint \
+ --app \
+ --src-dir \
+ --import-alias "@/*"
+ 
+cd bayside-clubs
+ 
+npm install @supabase/supabase-js @supabase/ssr
+npm install @supabase/auth-helpers-nextjs
+npm install lucide-react
+npm install clsx tailwind-merge
+ 
+After installation, confirm the package.json has all these packages listed.
+Then show me the exact folder structure I should have at this point.
+
+ 
+Prompt 1.2 — 环境变量和Supabase配置
+在Supabase官网创建项目后使用，把你的Project URL和anon key填进去。
+ 
+ PROMPT — Copy and paste into VSCode AI assistant  
+I have created a Supabase project. My credentials are:
+- Project URL: [PASTE YOUR SUPABASE URL HERE]
+- Anon Key: [PASTE YOUR ANON KEY HERE]
+ 
+Please create the following files for me:
+ 
+1. .env.local with the correct environment variables
+2. .env.example (same structure but with placeholder values, safe to commit)
+3. src/lib/supabase/client.ts — browser-side Supabase client
+4. src/lib/supabase/server.ts — server-side Supabase client for Server Components
+5. src/lib/supabase/middleware.ts — Supabase client for middleware
+6. middleware.ts at root — protects authenticated routes
+ 
+The middleware should:
+- Protect these routes: /dashboard, /admin, /profile
+- Allow public access to: /, /clubs, /events, /login, /register
+- Redirect unauthenticated users to /login
+- Refresh the session token on every request
+ 
+Use the @supabase/ssr package for all client creation.
+Use TypeScript throughout. No any types.
+
+ 
+Prompt 1.3 — 数据库Schema和迁移文件
+把这个提示词发给AI，让它生成所有SQL迁移文件，然后在Supabase Dashboard的SQL Editor里执行。
+ 
+ PROMPT — Copy and paste into VSCode AI assistant  
+Create the complete database schema for BaysideClubs.
+Generate a single SQL file: supabase/migrations/001_initial_schema.sql
+ 
+Requirements:
+ 
+-- TABLE 1: profiles (extends auth.users)
+Fields: id (UUID, PK, references auth.users), email (TEXT NOT NULL),
+display_name (TEXT), grade (INT, 9-12), role (TEXT, default student,
+check: student|admin), avatar_url (TEXT), created_at (TIMESTAMPTZ)
+ 
+-- TABLE 2: clubs
+Fields: id (UUID PK gen_random_uuid), name (TEXT NOT NULL UNIQUE),
+slug (TEXT NOT NULL UNIQUE), description (TEXT), category (TEXT,
+check: Academic|Arts|Sports|Service|Tech|Other), meeting_info (TEXT),
+contact_email (TEXT), cover_image_url (TEXT), is_active (BOOLEAN default true),
+created_at (TIMESTAMPTZ)
+ 
+-- TABLE 3: memberships
+Fields: id (UUID PK), user_id (UUID ref profiles, CASCADE),
+club_id (UUID ref clubs, CASCADE), role (TEXT default member,
+check: member|officer|admin), joined_at (TIMESTAMPTZ)
+UNIQUE constraint: (user_id, club_id)
+ 
+-- TABLE 4: events
+Fields: id (UUID PK), club_id (UUID ref clubs CASCADE), title (TEXT NOT NULL),
+description (TEXT), location (TEXT), starts_at (TIMESTAMPTZ NOT NULL),
+ends_at (TIMESTAMPTZ), capacity (INT nullable = unlimited),
+is_published (BOOLEAN default false), created_by (UUID ref profiles),
+created_at (TIMESTAMPTZ)
+ 
+-- TABLE 5: registrations
+Fields: id (UUID PK), event_id (UUID ref events CASCADE),
+user_id (UUID ref profiles CASCADE), status (TEXT default confirmed,
+check: confirmed|cancelled), registered_at (TIMESTAMPTZ)
+UNIQUE constraint: (event_id, user_id)
+ 
+-- TABLE 6: announcements
+Fields: id (UUID PK), club_id (UUID ref clubs CASCADE),
+title (TEXT NOT NULL), body (TEXT), created_by (UUID ref profiles),
+created_at (TIMESTAMPTZ)
+ 
+Also create:
+1. A trigger: after INSERT on auth.users, auto-create a profiles row
+2. Row Level Security policies for ALL tables:
+  - profiles: users read all, users update own only
+  - clubs: authenticated users read active clubs, only admin role can insert/update
+  - memberships: users read own, club admin reads their club, user inserts own, club admin deletes
+  - events: authenticated read published, club admin insert/update for their club
+  - registrations: user reads own, event club admin reads all for event, user inserts own, user updates own
+  - announcements: authenticated read, club admin insert for their club
+ 
+Enable RLS on all tables.
+Add indexes on: memberships.club_id, events.club_id, events.starts_at,
+registrations.event_id, registrations.user_id
+
+ 
+Prompt 1.4 — TypeScript型別定義
+生成所有数据库表的TypeScript接口。
+ 
+ PROMPT — Copy and paste into VSCode AI assistant  
+Create src/lib/types/database.ts with TypeScript interfaces for all database tables.
+ 
+Also create src/lib/types/index.ts that exports everything.
+ 
+Include:
+- Database row types (e.g., Profile, Club, Membership, Event, Registration, Announcement)
+- Insert types (e.g., ClubInsert, EventInsert) — without id and created_at
+- Update types (e.g., ClubUpdate) — all fields optional
+- Enum types for role values, category values, status values
+- Composite types (e.g., ClubWithMemberCount, EventWithRegistrationCount)
+ 
+Use TypeScript strict mode conventions.
+No any types. Use null instead of undefined for nullable database fields.
+ 
+Also generate the Supabase auto-generated types format:
+src/lib/types/supabase.ts — using the Database type pattern that
+Supabase CLI generates, so I can use it with the typed Supabase client.
+
+ 
+ 
+
+第二部分：用户认证系统
+
+Prompt 2.1 — 注册页面
+ PROMPT — Copy and paste into VSCode AI assistant  
+Create the registration page for BaysideClubs at src/app/(auth)/register/page.tsx
+ 
+Requirements:
+- Form fields: email, password, confirm password, display name
+- VALIDATION (client-side):
+ * Email must end with @bayside.edu — show error if not
+ * Password minimum 8 characters
+ * Password and confirm password must match
+ * Display name required, 2-50 characters
+- On submit: call supabase.auth.signUp()
+- On success: show message "Check your school email to verify your account"
+- On error: show specific error message from Supabase
+- Link to /login at bottom
+ 
+Styling with Tailwind CSS:
+- Clean, minimal design appropriate for a high school platform
+- Mobile responsive
+- Loading state on submit button (spinner, disabled during request)
+- Error states on individual fields (red border + error text below field)
+ 
+Use React hooks (useState, useEffect) — this is a client component.
+Use the browser Supabase client from @/lib/supabase/client
+Full TypeScript, no any types.
+
+ 
+Prompt 2.2 — 登录页面
+ PROMPT — Copy and paste into VSCode AI assistant  
+Create the login page at src/app/(auth)/login/page.tsx
+ 
+Requirements:
+- Form fields: email, password
+- On submit: call supabase.auth.signInWithPassword()
+- On success: router.push("/clubs")
+- On error "Email not confirmed": show specific message
+ "Please check your @bayside.edu email and click the verification link"
+- On error "Invalid credentials": show "Incorrect email or password"
+- "Forgot password?" link that leads to /reset-password
+- Link to /register at bottom
+ 
+Also create src/app/(auth)/reset-password/page.tsx:
+- Input: email address
+- On submit: call supabase.auth.resetPasswordForEmail()
+- On success: show "Password reset link sent to your email"
+ 
+Same Tailwind styling conventions as register page.
+Client component. Full TypeScript.
+
+ 
+Prompt 2.3 — Auth状态管理
+ PROMPT — Copy and paste into VSCode AI assistant  
+Create a global auth context and user session management for BaysideClubs.
+ 
+Create these files:
+ 
+1. src/components/providers/AuthProvider.tsx
+  - React context that holds: user, profile, isLoading
+  - Fetches profile from profiles table when user logs in
+  - Listens to supabase.auth.onAuthStateChange()
+  - Provides: useAuth() hook
+ 
+2. src/hooks/useAuth.ts
+  - Returns: { user, profile, isLoading, isAdmin, isClubAdmin(clubId) }
+  - isAdmin: true if profile.role === "admin"
+  - isClubAdmin(clubId): async function that queries memberships table
+ 
+3. Update src/app/layout.tsx
+  - Wrap children with AuthProvider
+ 
+4. src/components/layout/Navbar.tsx
+  - Show Login/Register buttons when logged out
+  - Show user display name + logout button when logged in
+  - Show "Admin" badge if profile.role === "admin"
+  - Logout calls supabase.auth.signOut() then router.push("/login")
+ 
+Full TypeScript. Use server component for layout, client component for Navbar.
+
+ 
+ 
+
+第三部分：社团功能
+
+Prompt 3.1 — 社团目录页面
+ PROMPT — Copy and paste into VSCode AI assistant  
+Create the clubs directory at src/app/clubs/page.tsx
+ 
+This is a Server Component that fetches clubs from Supabase.
+ 
+Requirements:
+- Fetch all active clubs (is_active = true) with member count
+ SQL: SELECT clubs.*, COUNT(memberships.id) as member_count
+      FROM clubs LEFT JOIN memberships ON clubs.id = memberships.club_id
+      WHERE clubs.is_active = true GROUP BY clubs.id
+- Display as a responsive grid (1 col mobile, 2 col tablet, 3 col desktop)
+- Each card shows: club name, category badge, description (truncated 100 chars),
+ member count, "View Club" button
+- Category filter buttons at top (All, Academic, Arts, Sports, Service, Tech, Other)
+ Make this client-side filtering (no page reload)
+- Search input that filters by club name in real time
+ 
+Create src/components/clubs/ClubCard.tsx — the individual card component
+Create src/components/clubs/ClubGrid.tsx — the grid wrapper with filter/search
+ (ClubGrid is a client component for interactivity)
+ 
+Category badge colors in Tailwind:
+Academic=blue, Arts=purple, Sports=green, Service=orange, Tech=indigo, Other=gray
+ 
+Full TypeScript. Server component for data fetching, client component for filtering.
+
+ 
+Prompt 3.2 — 社团详情页面
+ PROMPT — Copy and paste into VSCode AI assistant  
+Create the individual club page at src/app/clubs/[slug]/page.tsx
+ 
+This is a Server Component. Fetch club by slug from URL params.
+ 
+Requirements:
+- Fetch: club info, member count, upcoming events (next 5), announcements (latest 3)
+- If club not found or is_active=false: show 404 via notFound()
+- Page sections:
+ 1. Header: cover image (or placeholder gradient), club name, category, member count
+ 2. Join/Leave button — client component (needs auth state)
+ 3. About section: description, meeting info, contact email
+ 4. Upcoming events list (link to /events/[id])
+ 5. Announcements list
+ 6. Officers/Admin list (show display names of members with officer/admin role)
+ 
+Create src/components/clubs/JoinButton.tsx as a Client Component:
+- Check if user is already a member (query memberships)
+- Show "Join Club" if not member — onClick inserts into memberships
+- Show "Leave Club" if member — onClick deletes from memberships
+- Show "Loading..." spinner during request
+- If not logged in: redirect to /login with return URL
+- Optimistic UI: update button state immediately, rollback on error
+ 
+Generate static params for all club slugs (generateStaticParams).
+Full TypeScript.
+
+ 
+Prompt 3.3 — 加入/退出社团的Server Actions
+ PROMPT — Copy and paste into VSCode AI assistant  
+Create Server Actions for club membership in src/lib/actions/clubs.ts
+ 
+Actions to create:
+ 
+1. joinClub(clubId: string): Promise<{ success: boolean; error?: string }>
+  - Get current user from Supabase server client
+  - If no user: return { success: false, error: "Not authenticated" }
+  - Check if already a member: SELECT from memberships WHERE user_id AND club_id
+  - If already member: return { success: false, error: "Already a member" }
+  - Insert into memberships with role="member"
+  - revalidatePath("/clubs/[slug]") and revalidatePath("/clubs")
+  - Return { success: true }
+ 
+2. leaveClub(clubId: string): Promise<{ success: boolean; error?: string }>
+  - Get current user
+  - Check user is not the only admin — if so, block with error
+  - Delete from memberships WHERE user_id AND club_id
+  - revalidatePath appropriately
+  - Return { success: true }
+ 
+3. getMembershipStatus(clubId: string): Promise<"member" | "officer" | "admin" | null>
+  - Returns the user's role in this club, or null if not a member
+ 
+Use "use server" directive.
+Use the server-side Supabase client from @/lib/supabase/server
+Full TypeScript. Handle all error cases.
+
+ 
+ 
+
+第四部分：活动管理
+
+Prompt 4.1 — 活动列表页面
+ PROMPT — Copy and paste into VSCode AI assistant  
+Create the events listing page at src/app/events/page.tsx
+ 
+Server Component. Fetch all upcoming published events.
+ 
+SQL query:
+SELECT events.*, clubs.name as club_name, clubs.slug as club_slug,
+ COUNT(registrations.id) FILTER (WHERE registrations.status = "confirmed")
+ as registration_count
+FROM events
+JOIN clubs ON events.club_id = clubs.id
+LEFT JOIN registrations ON events.id = registrations.event_id
+WHERE events.is_published = true AND events.starts_at > NOW()
+GROUP BY events.id, clubs.name, clubs.slug
+ORDER BY events.starts_at ASC
+ 
+Display:
+- Upcoming events in a list (not grid) — each event shows:
+ * Date and time (formatted: "Tuesday, June 15 · 3:00 PM")
+ * Event title
+ * Club name (linked to /clubs/[slug])
+ * Location
+ * Spots remaining: "X spots left" or "Full" or "Unlimited"
+ * "View Event" button
+- Group events by week: "This Week", "Next Week", "Later"
+- Empty state: "No upcoming events. Check back soon!"
+ 
+Create src/components/events/EventCard.tsx
+Full TypeScript. Format dates using Intl.DateTimeFormat.
+
+ 
+Prompt 4.2 — 活动详情页面和报名功能
+ PROMPT — Copy and paste into VSCode AI assistant  
+Create the event detail page at src/app/events/[id]/page.tsx
+ 
+Server Component for data fetching.
+ 
+Fetch:
+- Event details
+- Club info (name, slug)
+- Registration count (confirmed registrations)
+- Whether current user is registered
+ 
+Page sections:
+1. Event header: title, date/time, location, club name
+2. Description
+3. Registration panel (client component):
+  - If not logged in: "Login to register" button → /login
+  - If registered: "You are registered ✓" + "Cancel Registration" button
+  - If event full: "This event is full" (disabled)
+  - If open: "Register for this event" button
+  - Show: "X of Y spots filled" progress bar, or "Unlimited spots"
+4. Attendee count (number only, not names — privacy)
+ 
+Create src/components/events/RegistrationPanel.tsx as Client Component
+ 
+Create Server Actions in src/lib/actions/events.ts:
+ 
+1. registerForEvent(eventId: string)
+  - Check user is authenticated
+  - Check event exists and is published
+  - Check capacity: COUNT confirmed registrations < events.capacity (or capacity is null)
+  - Check not already registered
+  - Insert into registrations with status="confirmed"
+  - revalidatePath
+ 
+2. cancelRegistration(eventId: string)
+  - Check user has confirmed registration
+  - Update registrations.status to "cancelled"
+  - revalidatePath
+ 
+Full TypeScript. Handle race conditions on capacity check with Supabase RLS.
+
+ 
+ 
+
+第五部分：管理员功能
+
+Prompt 5.1 — 社团管理员仪表板
+ PROMPT — Copy and paste into VSCode AI assistant  
+Create the club admin dashboard at src/app/(dashboard)/dashboard/page.tsx
+ 
+This page is for club admins to manage their clubs.
+A user can be admin of multiple clubs — show a selector if they admin multiple.
+ 
+Data to fetch:
+- Clubs where current user has role="admin" in memberships
+- For selected club: member count, upcoming events count, recent registrations
+ 
+Dashboard sections:
+ 
+Section 1 — Stats row:
+- Total members, Upcoming events, This week's registrations
+- Each in a styled card with a number and label
+ 
+Section 2 — Members tab:
+- Table: display name, grade, joined date, role, actions (Remove, Promote to Officer)
+- Remove button: calls removeClubMember(memberId, clubId) server action
+- Pagination if > 20 members
+ 
+Section 3 — Events tab:
+- List of all events for this club (past and upcoming)
+- Each row: title, date, registrations count / capacity, published status, Edit/Delete buttons
+- "Create New Event" button → opens modal or goes to /dashboard/events/new
+ 
+Section 4 — Club Settings tab:
+- Edit form: club description, meeting info, contact email, category
+- Save changes button → calls updateClub(clubId, data) server action
+ 
+Protect this route: redirect to /login if not authenticated,
+redirect to /clubs if authenticated but not a club admin anywhere.
+ 
+Full TypeScript. Mix of server and client components as appropriate.
+
+ 
+Prompt 5.2 — 创建和编辑活动
+ PROMPT — Copy and paste into VSCode AI assistant  
+Create the event creation form at src/app/(dashboard)/dashboard/events/new/page.tsx
+and event edit at src/app/(dashboard)/dashboard/events/[id]/edit/page.tsx
+ 
+Form fields:
+- Title (required, text)
+- Description (textarea)
+- Location (text)
+- Date (date picker) + Start time (time picker)
+- End time (optional, time picker)
+- Capacity (number input, optional — empty means unlimited)
+- Published toggle (boolean — draft vs visible to students)
+ 
+Validation:
+- Title required
+- Start date must be in the future
+- End time must be after start time if provided
+- Capacity must be positive integer if provided
+ 
+Server Actions in src/lib/actions/events.ts:
+ 
+createEvent(formData: EventInsert): Promise<{ success: boolean; eventId?: string; error?: string }>
+- Verify user is club admin for the club_id in formData
+- Insert into events
+- Return new event id
+ 
+updateEvent(eventId: string, formData: Partial<EventInsert>)
+- Verify user is club admin for this event's club
+- Update events row
+ 
+deleteEvent(eventId: string)
+- Verify user is club admin
+- Check no confirmed registrations exist (or handle cancellation)
+- Delete event (cascades to registrations)
+ 
+After success: redirect to /dashboard
+Full TypeScript.
+
+ 
+Prompt 5.3 — 系统管理员面板（你自己用的）
+ PROMPT — Copy and paste into VSCode AI assistant  
+Create the system admin panel at src/app/(dashboard)/admin/page.tsx
+ 
+This page is ONLY for users with profile.role = "admin" (your account).
+Redirect all others to /clubs.
+ 
+Section 1 — Platform Stats:
+- Total registered users, Total clubs, Total events (upcoming), Total registrations this month
+ 
+Section 2 — Create New Club:
+- Form: club name (auto-generates slug from name), description, category, meeting info
+- Server action: createClub(data) — inserts into clubs table
+- After creation: show club in list below
+ 
+Section 3 — Manage Club Admins:
+- Search user by email
+- Select club from dropdown
+- "Make Club Admin" button → inserts/updates memberships with role="admin"
+- List of current club admins: [User display name] → [Club name] with Remove button
+ 
+Section 4 — All Users table:
+- Columns: email, display name, grade, role, joined date, actions
+- Action: "Make System Admin" (updates profile.role to "admin")
+- Action: "Deactivate" (you can define this as a soft delete or flag)
+- Search by email or name
+- Pagination
+ 
+Section 5 — All Clubs table:
+- Columns: name, category, member count, event count, active status
+- Toggle active/inactive
+ 
+Server Actions in src/lib/actions/admin.ts — all require admin role check.
+Full TypeScript.
+
+ 
+ 
+
+第六部分：UI组件库
+
+Prompt 6.1 — 基础UI组件
+ PROMPT — Copy and paste into VSCode AI assistant  
+Create a set of reusable UI components for BaysideClubs in src/components/ui/
+ 
+Create these components with Tailwind CSS. Clean, minimal design.
+School colors: navy blue (#1E3A5F) as primary, white background.
+ 
+1. src/components/ui/Button.tsx
+  Props: variant (primary|secondary|danger|ghost), size (sm|md|lg),
+  isLoading (boolean), disabled, onClick, type, children
+  - primary: navy background, white text
+  - secondary: white background, navy border, navy text
+  - danger: red background, white text
+  - ghost: no background, navy text, hover shows background
+  - isLoading: show spinner SVG, disable clicks
+ 
+2. src/components/ui/Badge.tsx
+  Props: variant (club category colors + status colors), children
+  Small pill-shaped label. Used for club categories and event status.
+ 
+3. src/components/ui/Card.tsx
+  Props: children, className, onClick (optional — makes it hoverable)
+  White background, subtle border, rounded corners, shadow.
+ 
+4. src/components/ui/Input.tsx
+  Props: label, error, helperText, ...all standard input props
+  - Label above input
+  - Error state: red border + red error text below
+  - Helper text: gray text below (shown when no error)
+ 
+5. src/components/ui/Modal.tsx
+  Props: isOpen, onClose, title, children
+  - Backdrop click closes modal
+  - Escape key closes modal
+  - Trap focus inside modal when open
+  - Animate in/out with Tailwind transition classes
+ 
+6. src/lib/utils/cn.ts
+  Utility function using clsx + tailwind-merge for conditional classes.
+ 
+Export all from src/components/ui/index.ts
+Full TypeScript with proper prop types.
+
+ 
+Prompt 6.2 — 导航栏和布局
+ PROMPT — Copy and paste into VSCode AI assistant  
+Create the main layout components for BaysideClubs.
+ 
+1. src/components/layout/Navbar.tsx (Client Component)
+ 
+Desktop layout (flex row):
+- Left: "BaysideClubs" logo text (links to /) + nav links: Clubs, Events
+- Right: Login + Register buttons (logged out) OR user menu (logged in)
+ 
+User menu when logged in:
+- Display name with dropdown arrow
+- Dropdown items: My Profile, My Clubs, Dashboard (if club admin),
+ Admin Panel (if system admin), divider, Sign Out
+ 
+Mobile layout:
+- Hamburger menu button
+- Slide-in drawer with same links
+- Close on navigation
+ 
+2. src/components/layout/Footer.tsx
+- Simple footer: "BaysideClubs · Bayside High School · Built by Haoxuan Zheng"
+- GitHub link icon (opens github.com/[your-username]/bayside-clubs)
+ 
+3. src/app/layout.tsx — update to include:
+- AuthProvider wrapper
+- Navbar at top
+- Main content area with min-height
+- Footer at bottom
+- Proper metadata: title "BaysideClubs", description
+ 
+4. src/app/page.tsx — Homepage:
+- Hero: "Find your community at Bayside" headline
+- 3 feature cards: Browse Clubs, Discover Events, Join Today
+- Stats: "[X] Clubs · [X] Students · [X] Events This Month"
+ (Fetch these numbers from Supabase)
+- CTA button: "Browse Clubs" → /clubs
+ 
+Full TypeScript. Mobile-responsive.
+
+ 
+ 
+
+第七部分：调试和错误处理提示词
+
+Prompt 7.1 — 通用调试模板
+遇到任何报错时使用这个模板：
+ 
+ PROMPT — Copy and paste into VSCode AI assistant  
+I am getting an error in BaysideClubs. Here is the full error:
+ 
+[PASTE FULL ERROR MESSAGE HERE INCLUDING STACK TRACE]
+ 
+Here is the relevant file:
+ 
+[PASTE THE FILE THAT HAS THE ERROR]
+ 
+Project context:
+- Next.js 14 App Router
+- TypeScript strict mode
+- Supabase for auth and database
+- The error happens when: [DESCRIBE WHAT YOU WERE DOING]
+ 
+Please:
+1. Identify the root cause of the error
+2. Explain why it is happening in simple terms
+3. Show me the corrected code
+4. Explain what you changed and why
+
+ 
+Prompt 7.2 — Supabase RLS调试
+当Supabase查询返回空数据或权限错误时使用：
+ 
+ PROMPT — Copy and paste into VSCode AI assistant  
+I am having a Supabase Row Level Security (RLS) issue in BaysideClubs.
+ 
+The problem: [DESCRIBE THE PROBLEM — e.g., "Query returns empty array but
+data exists in the table" or "Getting 403 error on insert"]
+ 
+The query I am running:
+[PASTE YOUR SUPABASE QUERY]
+ 
+My current RLS policy for this table:
+[PASTE FROM SUPABASE DASHBOARD: Authentication > Policies]
+ 
+The user context:
+- User is logged in: [yes/no]
+- User role in profiles table: [student/admin]
+- User's membership role for this club: [member/officer/admin/none]
+ 
+Please:
+1. Diagnose why the RLS policy is blocking or allowing incorrectly
+2. Show me the corrected SQL policy
+3. Explain the logic of the corrected policy
+4. Give me a SQL query I can run in Supabase Dashboard to test the fix
+
+ 
+Prompt 7.3 — TypeScript类型错误
+遇到TypeScript类型错误时使用：
+ 
+ PROMPT — Copy and paste into VSCode AI assistant  
+I have a TypeScript type error in BaysideClubs.
+ 
+Error message:
+[PASTE THE EXACT TYPESCRIPT ERROR]
+ 
+The code causing the error:
+[PASTE THE CODE]
+ 
+My type definitions:
+[PASTE RELEVANT TYPES FROM src/lib/types/]
+ 
+Please fix the type error without using "any" types.
+Explain what the correct type should be and why.
+If the error reveals a design problem, suggest the better approach.
+
+ 
+ 
+
+第八部分：测试和部署
+
+Prompt 8.1 — 测试检查清单生成
+ PROMPT — Copy and paste into VSCode AI assistant  
+Generate a manual testing checklist for BaysideClubs.
+ 
+For each of these user flows, list every step to test and the expected outcome:
+ 
+1. New student registration and email verification
+2. Login and logout
+3. Browse clubs and join a club
+4. Leave a club
+5. View events and register for an event
+6. Cancel an event registration
+7. Club admin: create a new event
+8. Club admin: view attendee list
+9. Club admin: edit club information
+10. Club admin: remove a member
+11. System admin: create a new club
+12. System admin: promote user to club admin
+13. Capacity enforcement: what happens when event is full
+14. Error cases: non-school email, wrong password, duplicate registration
+ 
+Format as a table: Step | Action | Expected Result | Pass/Fail
+
+ 
+Prompt 8.2 — Vercel部署准备
+ PROMPT — Copy and paste into VSCode AI assistant  
+Help me prepare BaysideClubs for deployment to Vercel.
+ 
+Create or review:
+ 
+1. vercel.json configuration file if needed
+ 
+2. A deployment checklist covering:
+  - All environment variables that need to be set in Vercel dashboard
+  - next.config.js settings for production (image domains, etc.)
+  - Any build errors to watch for
+ 
+3. Supabase production setup:
+  - URL configuration for auth redirects (add Vercel domain to allowed URLs)
+  - CORS settings
+ 
+4. README.md for the GitHub repository:
+  - Project description
+  - Tech stack
+  - Local development setup instructions
+  - Environment variables table
+  - Deployment instructions
+  - Screenshots section (placeholder)
+ 
+My Vercel URL will be: bayside-clubs.vercel.app
+Custom domain (if I get one): baysideclubs.dev
+
+ 
+ 
+
+第九部分：申请材料相关提示词
+
+Prompt 9.1 — GitHub README生成
+用于生成高质量的GitHub README，让招生官看到专业的项目页面。
+ 
+ PROMPT — Copy and paste into VSCode AI assistant  
+Write a professional GitHub README.md for BaysideClubs.
+ 
+Project context:
+- Built by Haoxuan Zheng, a high school junior at Bayside High School in Queens, NY
+- Full-stack web platform for student organizations
+- Tech: Next.js 14, TypeScript, Supabase, Tailwind CSS, Vercel
+ 
+README should include:
+1. Project title with a one-line description
+2. Live demo link: [your Vercel URL]
+3. Tech stack badges (use shields.io format)
+4. Problem statement: why this platform was needed
+5. Features list (all Phase 1 features)
+6. Screenshots section (use placeholder text [Screenshot: Club Directory])
+7. Local Development setup:
+  - Prerequisites (Node.js 18+, npm)
+  - Clone and install
+  - Environment variables (reference .env.example)
+  - Supabase setup (link to migration files)
+  - npm run dev
+8. Database schema diagram description
+9. Deployment section
+10. About the developer section:
+   "Built by Haoxuan Zheng, Grade 11, Bayside High School.
+    CTE: Computer Programming & Web Design.
+    Also built: Sanus Space (AI health app, App Store + Google Play)"
+ 
+Make it look professional but appropriate for a student project.
+Use clear headings, bullet points, and code blocks.
+
+ 
+Prompt 9.2 — MIT Maker Portfolio项目说明
+生成可以直接用于MIT Maker Portfolio提交的项目说明文档。
+ 
+ PROMPT — Copy and paste into VSCode AI assistant  
+Write a project writeup for the MIT Maker Portfolio for BaysideClubs.
+ 
+MIT Maker Portfolio asks three questions. Answer each thoroughly:
+ 
+Question 1: What did you make?
+- Describe BaysideClubs: a full-stack web platform for student organizations
+ at Bayside High School in Queens, New York
+- Include: the problem it solves, who uses it, what they can do with it
+- Mention: [X] clubs onboarded, [X] student users
+ 
+Question 2: How did you make it?
+- Walk through the development process chronologically
+- Explain key technical decisions:
+ * Why Next.js App Router (server components reduce client JS)
+ * Why Supabase (built-in auth + RLS for security)
+ * Why Row Level Security over application-level checks
+ * The hardest part: designing the role system (user can be member of multiple
+   clubs with different roles in each — required junction table with role column)
+- Mention: designed database schema before writing any application code
+- Include specific challenges and how you solved them
+ 
+Question 3: What did you learn?
+- Security must be designed from the start, not added later
+- The difference between institutional software and consumer software
+- How to get real users: you need to solve a problem people actually have,
+ not just build something technically interesting
+- Connection to Sanus Space: both solve information visibility problems,
+ but at different scales (individual vs institution)
+ 
+Write in first person, authentic voice. 400-600 words total.
+This is a technical audience (MIT Engineering Advisory Board).
+Be specific about technical decisions. Avoid vague claims.
+
+ 
+ 
+
+ 
+快速参考：常用Supabase查询模板
+
+这些是你在开发中最常用的查询，复制后填入具体参数使用。
+ 
+获取当前用户的社团列表
+ PROMPT — Copy and paste into VSCode AI assistant  
+const { data: myClubs } = await supabase
+ .from("memberships")
+ .select("role, clubs(id, name, slug, category)")
+ .eq("user_id", user.id)
+
+ 
+获取社团成员数量
+ PROMPT — Copy and paste into VSCode AI assistant  
+const { count } = await supabase
+ .from("memberships")
+ .select("*", { count: "exact", head: true })
+ .eq("club_id", clubId)
+
+ 
+获取活动的已报名人数
+ PROMPT — Copy and paste into VSCode AI assistant  
+const { count } = await supabase
+ .from("registrations")
+ .select("*", { count: "exact", head: true })
+ .eq("event_id", eventId)
+ .eq("status", "confirmed")
+
+ 
+检查用户是否已报名某活动
+ PROMPT — Copy and paste into VSCode AI assistant  
+const { data } = await supabase
+ .from("registrations")
+ .select("id, status")
+ .eq("event_id", eventId)
+ .eq("user_id", userId)
+ .single()
+ 
+const isRegistered = data?.status === "confirmed"
+
+ 
+检查用户是否是某社团的管理员
+ PROMPT — Copy and paste into VSCode AI assistant  
+const { data } = await supabase
+ .from("memberships")
+ .select("role")
+ .eq("club_id", clubId)
+ .eq("user_id", userId)
+ .in("role", ["admin", "officer"])
+ .single()
+ 
+const isAdmin = data?.role === "admin"
