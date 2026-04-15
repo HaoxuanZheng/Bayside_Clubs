@@ -101,7 +101,7 @@ export default function ResetPasswordPage() {
                   ? "border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500"
                   : "border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500"
               }`}
-              placeholder="you@bayside.edu"
+              placeholder="you@nycstudents.net"
               disabled={loading || !!successMessage}
             />
             {fieldErrors.email && (

@@ -157,7 +157,7 @@ Create the registration page for BaysideClubs at src/app/(auth)/register/page.ts
 Requirements:
 - Form fields: email, password, confirm password, display name
 - VALIDATION (client-side):
- * Email must end with @bayside.edu — show error if not
+ * Email must end with @nycstudents.net — show error if not
  * Password minimum 8 characters
  * Password and confirm password must match
  * Display name required, 2-50 characters
@@ -186,7 +186,7 @@ Requirements:
 - On submit: call supabase.auth.signInWithPassword()
 - On success: router.push("/clubs")
 - On error "Email not confirmed": show specific message
- "Please check your @bayside.edu email and click the verification link"
+ "Please check your @nycstudents.net email and click the verification link"
 - On error "Invalid credentials": show "Incorrect email or password"
 - "Forgot password?" link that leads to /reset-password
 - Link to /register at bottom

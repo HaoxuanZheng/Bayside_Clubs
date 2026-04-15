@@ -36,7 +36,7 @@ export default function LoginPage() {
 
   function getErrorMessage(errorMsg: string): string {
     if (errorMsg.toLowerCase().includes("email not confirmed")) {
-      return "Please check your @bayside.edu email and click the verification link";
+      return "Please check your @nycstudents.net email and click the verification link";
     }
     if (errorMsg.toLowerCase().includes("invalid login credentials")) {
       return "Incorrect email or password";
@@ -104,7 +104,7 @@ export default function LoginPage() {
                   ? "border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500"
                   : "border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500"
               }`}
-              placeholder="you@bayside.edu"
+              placeholder="you@nycstudents.net"
               disabled={loading}
             />
             {fieldErrors.email && (
@@ -183,7 +183,7 @@ export default function LoginPage() {
 
         {/* Register Link */}
         <p className="text-center text-sm text-gray-600">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link href="/register" className="font-semibold text-blue-600 hover:text-blue-500">
             Create one
           </Link>

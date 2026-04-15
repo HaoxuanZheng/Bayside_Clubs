@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 
@@ -14,7 +13,6 @@ interface FieldErrors {
 }
 
 export default function RegisterPage() {
-  const router = useRouter();
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
@@ -116,7 +114,7 @@ export default function RegisterPage() {
           <div className="rounded-lg bg-green-50 border border-green-200 p-4">
             <p className="text-sm font-medium text-green-800">{successMessage}</p>
             <p className="mt-2 text-sm text-green-700">
-              If you don't see the email, check your spam folder.
+              If you don&apos;t see the email, check your spam folder.
             </p>
           </div>
         )}
