@@ -9,62 +9,44 @@ import { supabase } from "@/lib/supabase/client";
 interface FieldErrors {
   email?: string;
   password?: string;
-  confirmPassword?: string;
-  displayName?: string;
 }
 
-export default function RegisterPage() {
+export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
-  const [confirmPassword, setConfirmPassword] = useState<string>("");
-  const [displayName, setDisplayName] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   function validateFields(): boolean {
     const errors: FieldErrors = {};
 
-    // Email validation
     if (!email.trim()) {
       errors.email = "Email is required";
-    } else if (!email.endsWith("@nycstudents.net")) {
-      errors.email = "Email must end with @nycstudents.net";
     }
 
-    // Password validation
     if (!password) {
       errors.password = "Password is required";
-    } else if (password.length < 8) {
-      errors.password = "Password must be at least 8 characters";
-    }
-
-    // Confirm password validation
-    if (!confirmPassword) {
-      errors.confirmPassword = "Please confirm your password";
-    } else if (password !== confirmPassword) {
-      errors.confirmPassword = "Passwords do not match";
-    }
-
-    // Display name validation
-    if (!displayName.trim()) {
-      errors.displayName = "Display name is required";
-    } else if (displayName.trim().length < 2) {
-      errors.displayName = "Display name must be at least 2 characters";
-    } else if (displayName.trim().length > 50) {
-      errors.displayName = "Display name must be at most 50 characters";
     }
 
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   }
 
+  function getErrorMessage(errorMsg: string): string {
+    if (errorMsg.toLowerCase().includes("email not confirmed")) {
+      return "Please check your @bayside.edu email and click the verification link";
+    }
+    if (errorMsg.toLowerCase().includes("invalid login credentials")) {
+      return "Incorrect email or password";
+    }
+    return errorMsg;
+  }
+
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setGeneralError(null);
-    setSuccessMessage(null);
 
     if (!validateFields()) {
       return;
@@ -72,31 +54,18 @@ export default function RegisterPage() {
 
     setLoading(true);
 
-    const { data, error: signUpError } = await supabase.auth.signUp({
+    const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
-      options: {
-        data: {
-          display_name: displayName.trim(),
-        },
-      },
     });
 
-    if (signUpError) {
-      setGeneralError(signUpError.message);
+    if (signInError) {
+      setGeneralError(getErrorMessage(signInError.message));
       setLoading(false);
       return;
     }
 
-    if (data?.user) {
-      setSuccessMessage("Check your school email to verify your account");
-      setEmail("");
-      setPassword("");
-      setConfirmPassword("");
-      setDisplayName("");
-      setFieldErrors({});
-    }
-
+    router.push("/clubs");
     setLoading(false);
   }
 
@@ -105,21 +74,11 @@ export default function RegisterPage() {
       <div className="w-full max-w-md space-y-8">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Create Account</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Sign In</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Join Bayside Clubs
+            Access Bayside Clubs
           </p>
         </div>
-
-        {/* Success Message */}
-        {successMessage && (
-          <div className="rounded-lg bg-green-50 border border-green-200 p-4">
-            <p className="text-sm font-medium text-green-800">{successMessage}</p>
-            <p className="mt-2 text-sm text-green-700">
-              If you don't see the email, check your spam folder.
-            </p>
-          </div>
-        )}
 
         {/* General Error */}
         {generalError && (
@@ -130,33 +89,10 @@ export default function RegisterPage() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Display Name Field */}
-          <div>
-            <label htmlFor="displayName" className="block text-sm font-medium text-gray-700">
-              Display Name
-            </label>
-            <input
-              id="displayName"
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className={`mt-1 block w-full rounded-md border px-3 py-2 text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-0 ${
-                fieldErrors.displayName
-                  ? "border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500"
-                  : "border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500"
-              }`}
-              placeholder="e.g., Sarah Johnson"
-              disabled={loading}
-            />
-            {fieldErrors.displayName && (
-              <p className="mt-1 text-sm font-medium text-red-600">{fieldErrors.displayName}</p>
-            )}
-          </div>
-
           {/* Email Field */}
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              School Email
+              Email Address
             </label>
             <input
               id="email"
@@ -168,7 +104,7 @@ export default function RegisterPage() {
                   ? "border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500"
                   : "border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500"
               }`}
-              placeholder="you@nycstudents.net"
+              placeholder="you@bayside.edu"
               disabled={loading}
             />
             {fieldErrors.email && (
@@ -191,7 +127,7 @@ export default function RegisterPage() {
                   ? "border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500"
                   : "border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500"
               }`}
-              placeholder="At least 8 characters"
+              placeholder="Enter your password"
               disabled={loading}
             />
             {fieldErrors.password && (
@@ -199,27 +135,14 @@ export default function RegisterPage() {
             )}
           </div>
 
-          {/* Confirm Password Field */}
-          <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-              Confirm Password
-            </label>
-            <input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className={`mt-1 block w-full rounded-md border px-3 py-2 text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-0 ${
-                fieldErrors.confirmPassword
-                  ? "border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500"
-                  : "border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500"
-              }`}
-              placeholder="Re-enter your password"
-              disabled={loading}
-            />
-            {fieldErrors.confirmPassword && (
-              <p className="mt-1 text-sm font-medium text-red-600">{fieldErrors.confirmPassword}</p>
-            )}
+          {/* Forgot Password Link */}
+          <div className="flex justify-end">
+            <Link
+              href="/reset-password"
+              className="text-sm font-medium text-blue-600 hover:text-blue-500"
+            >
+              Forgot password?
+            </Link>
           </div>
 
           {/* Submit Button */}
@@ -250,19 +173,19 @@ export default function RegisterPage() {
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   />
                 </svg>
-                <span>Creating account...</span>
+                <span>Signing in...</span>
               </>
             ) : (
-              "Create Account"
+              "Sign In"
             )}
           </button>
         </form>
 
-        {/* Login Link */}
+        {/* Register Link */}
         <p className="text-center text-sm text-gray-600">
-          Already have an account?{" "}
-          <Link href="/login" className="font-semibold text-blue-600 hover:text-blue-500">
-            Sign in
+          Don't have an account?{" "}
+          <Link href="/register" className="font-semibold text-blue-600 hover:text-blue-500">
+            Create one
           </Link>
         </p>
       </div>
