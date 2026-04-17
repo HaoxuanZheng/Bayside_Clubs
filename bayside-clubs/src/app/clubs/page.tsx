@@ -47,6 +47,7 @@ export default async function ClubsPage() {
         counts[membership.club_id] = (counts[membership.club_id] ?? 0) + 1;
         return counts;
       },
+      {},
     );
 
     clubs = clubRows.map((club) => ({

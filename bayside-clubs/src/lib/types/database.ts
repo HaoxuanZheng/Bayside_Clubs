@@ -19,6 +19,7 @@ export interface Profile {
   display_name: string | null;
   grade: number | null;
   role: ProfileRole;
+  is_active: boolean;
   avatar_url: string | null;
   created_at: string; // timestamptz
 }
@@ -82,6 +83,7 @@ export interface ProfileInsert {
   display_name?: string | null;
   grade?: number | null;
   role?: ProfileRole; // defaults to 'student'
+  is_active?: boolean; // defaults to true
   avatar_url?: string | null;
 }
 

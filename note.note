@@ -186,7 +186,6 @@ Requirements:
 - On submit: call supabase.auth.signInWithPassword()
 - On success: router.push("/clubs")
 - On error "Email not confirmed": show specific message
- "Please check your @nycstudents.net email and click the verification link"
 - On error "Invalid credentials": show "Incorrect email or password"
 - "Forgot password?" link that leads to /reset-password
 - Link to /register at bottom

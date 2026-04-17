@@ -5,7 +5,8 @@ import type { FormEvent } from "react";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { ClubCategory, MembershipRole } from "@/lib/types";
-import { deleteClubEvent, promoteClubMember, removeClubMember, updateClub } from "@/lib/actions/dashboard";
+import { promoteClubMember, removeClubMember, updateClub } from "@/lib/actions/dashboard";
+import { deleteEvent } from "@/lib/actions/events";
 
 type ClubSettings = {
   description: string | null;
@@ -175,7 +176,7 @@ export default function ClubAdminDashboard({
   const handleDeleteEvent = (eventId: string) => {
     setErrorMessage(null);
     startTransition(async () => {
-      const result = await deleteClubEvent(eventId, selectedClub.id);
+      const result = await deleteEvent(eventId);
       if (!result.success) {
         setErrorMessage(result.error ?? "Unable to delete event");
         return;
@@ -338,7 +339,7 @@ export default function ClubAdminDashboard({
 
                       <div className="flex flex-wrap gap-2">
                         <Link
-                          href="/dashboard/events/new"
+                          href={`/dashboard/events/${event.id}/edit`}
                           className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
                         >
                           Edit

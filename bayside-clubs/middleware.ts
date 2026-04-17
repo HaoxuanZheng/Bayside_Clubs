@@ -7,13 +7,14 @@ export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
   const supabase = createMiddlewareSupabase(req, res);
 
-  // Refresh the session token on every request.
-  try {
-    // getSession triggers token refresh when needed and writes cookies via setAll
-    await supabase.auth.getSession();
-  } catch (err) {
-    // don't block requests on refresh errors
-    console.error("Supabase middleware refresh error:", err);
+  // getSession refreshes tokens when needed and writes cookies with setAll.
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  if (sessionError) {
+    console.error("Supabase middleware refresh error:", sessionError.message);
   }
 
   const pathname = req.nextUrl.pathname;
@@ -23,9 +24,6 @@ export async function middleware(req: NextRequest) {
 
   // If route is protected and there is no session, redirect to /login
   if (isProtected || isClubAdminPath) {
-    const { data } = await supabase.auth.getSession();
-    const session = data?.session ?? null;
-
     if (!session) {
       const loginUrl = new URL("/login", req.url);
       loginUrl.searchParams.set("from", pathname);

@@ -25,28 +25,24 @@ export default function RegisterPage() {
   function validateFields(): boolean {
     const errors: FieldErrors = {};
 
-    // Email validation
     if (!email.trim()) {
       errors.email = "Email is required";
     } else if (!email.endsWith("@nycstudents.net")) {
       errors.email = "Email must end with @nycstudents.net";
     }
 
-    // Password validation
     if (!password) {
       errors.password = "Password is required";
     } else if (password.length < 8) {
       errors.password = "Password must be at least 8 characters";
     }
 
-    // Confirm password validation
     if (!confirmPassword) {
       errors.confirmPassword = "Please confirm your password";
     } else if (password !== confirmPassword) {
       errors.confirmPassword = "Passwords do not match";
     }
 
-    // Display name validation
     if (!displayName.trim()) {
       errors.displayName = "Display name is required";
     } else if (displayName.trim().length < 2) {
@@ -99,19 +95,15 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8">
-        {/* Header */}
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900">Create Account</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Join Bayside Clubs
-          </p>
+          <p className="mt-2 text-sm text-gray-600">Join Bayside Clubs</p>
         </div>
 
-        {/* Success Message */}
         {successMessage && (
-          <div className="rounded-lg bg-green-50 border border-green-200 p-4">
+          <div className="rounded-lg border border-green-200 bg-green-50 p-4">
             <p className="text-sm font-medium text-green-800">{successMessage}</p>
             <p className="mt-2 text-sm text-green-700">
               If you don&apos;t see the email, check your spam folder.
@@ -119,16 +111,13 @@ export default function RegisterPage() {
           </div>
         )}
 
-        {/* General Error */}
         {generalError && (
-          <div className="rounded-lg bg-red-50 border border-red-200 p-4">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4">
             <p className="text-sm font-medium text-red-800">{generalError}</p>
           </div>
         )}
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Display Name Field */}
           <div>
             <label htmlFor="displayName" className="block text-sm font-medium text-gray-700">
               Display Name
@@ -151,7 +140,6 @@ export default function RegisterPage() {
             )}
           </div>
 
-          {/* Email Field */}
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
               School Email
@@ -174,7 +162,6 @@ export default function RegisterPage() {
             )}
           </div>
 
-          {/* Password Field */}
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
               Password
@@ -197,7 +184,6 @@ export default function RegisterPage() {
             )}
           </div>
 
-          {/* Confirm Password Field */}
           <div>
             <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
               Confirm Password
@@ -216,20 +202,21 @@ export default function RegisterPage() {
               disabled={loading}
             />
             {fieldErrors.confirmPassword && (
-              <p className="mt-1 text-sm font-medium text-red-600">{fieldErrors.confirmPassword}</p>
+              <p className="mt-1 text-sm font-medium text-red-600">
+                {fieldErrors.confirmPassword}
+              </p>
             )}
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? (
               <>
                 <svg
-                  className="animate-spin h-4 w-4"
+                  className="h-4 w-4 animate-spin"
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
@@ -256,7 +243,6 @@ export default function RegisterPage() {
           </button>
         </form>
 
-        {/* Login Link */}
         <p className="text-center text-sm text-gray-600">
           Already have an account?{" "}
           <Link href="/login" className="font-semibold text-blue-600 hover:text-blue-500">

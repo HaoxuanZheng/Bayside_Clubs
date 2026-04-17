@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
 import JoinButton from "@/components/clubs/JoinButton";
 import { createServerSupabase } from "@/lib/supabase/server";
 import type { Club, MembershipRole } from "@/lib/types";
@@ -38,14 +39,27 @@ function formatDate(value: string): string {
 }
 
 export async function generateStaticParams(): Promise<Array<{ slug: string }>> {
-  const supabase = await createServerSupabase();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  const { data } = await supabase
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return [];
+  }
+
+  const staticSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false },
+  });
+
+  const { data, error } = await staticSupabase
     .from("clubs")
     .select("slug")
     .eq("is_active", true);
 
-  return (data ?? []).map((club: { slug: string }) => ({ slug: club.slug }));
+  if (error) {
+    return [];
+  }
+
+  return (data ?? []).map((club) => ({ slug: club.slug }));
 }
 
 export default async function ClubDetailPage({ params }: ClubPageProps) {
