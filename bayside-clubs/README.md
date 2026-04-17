@@ -1,5 +1,5 @@
-# BaysideClubs
-Full-stack student organization platform for Bayside High School.
+# Bayside Hub
+Modern one-stop school hub website for Bayside High School.
 
 [![Next.js](https://img.shields.io/badge/Next.js-App%20Router-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -12,9 +12,12 @@ Full-stack student organization platform for Bayside High School.
 - https://baysideclubs.dev (custom domain, if configured)
 
 ## Why this exists
-Student clubs at school often rely on scattered flyers, chat messages, and word-of-mouth. BaysideClubs centralizes club discovery, event registration, and role-based management for students, club leaders, and system admins.
+School information can become fragmented across flyers, chats, and emails. Bayside Hub centralizes clubs, events, announcements, and role-based tools so students, teachers, and staff can use one trusted platform.
 
 ## Core features
+- One-stop homepage with a school-hub hero, live metrics, and quick access links
+- Role-based landing sections for students, teachers, and staff
+- School essentials cards for announcements, calendars, policies/resources, and support
 - School-email authentication with Supabase Auth
 - Club directory with category filtering, search, and membership actions
 - Club detail pages with officers, announcements, and upcoming events
@@ -23,7 +26,7 @@ Student clubs at school often rely on scattered flyers, chat messages, and word-
 - System admin panel for club creation, role management, and platform controls
 
 ## Screenshots
-- [Screenshot: Homepage]
+- [Screenshot: School Hub Homepage]
 - [Screenshot: Club Directory]
 - [Screenshot: Club Detail]
 - [Screenshot: Event Detail]

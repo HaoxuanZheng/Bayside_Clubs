@@ -1,40 +1,28 @@
-# Bayside_Clubs
+# Bayside Hub Repository
 
-Bayside_Clubs is a small web application for managing student clubs, events, and memberships at Bayside High School. It provides students, club leaders, and administrators with tools to discover clubs, register for events, manage memberships, and share announcements.
+Bayside Hub is a modern, responsive one-stop school website for Bayside High School.  
+This repository contains the production app used by students, teachers, and staff.
 
-## Key features
+## Repository layout
 
-- Club discovery and membership registration
-- User authentication and profiles (Supabase)
-- Student dashboard and admin management views
-- Event creation, RSVP, and announcements
-- Responsive UI built with Next.js and TypeScript
+- `bayside-clubs/` — Next.js application source code
+- `bayside-clubs/src/` — app routes, UI components, actions, and hooks
+- `bayside-clubs/supabase/migrations/` — database schema and migration SQL
+
+## Key capabilities
+
+- One-stop homepage with a school-hub hero, live metrics, and quick access links
+- Role-based sections for students, teachers, and staff
+- Club and event management with announcements and registrations
+- Admin dashboard and system administration tools
+- Supabase authentication, role-aware access, and RLS-backed data security
 
 ## Quick start
 
-1. Install dependencies:
+1. `cd bayside-clubs`
+2. `npm install`
+3. Copy `.env.example` to `.env.local` and set your Supabase values
+4. `npm run dev`
+5. Open `http://localhost:3000`
 
-	npm install
-
-2. Create a `.env.local` and add your Supabase keys (example variables: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`).
-
-3. Run the development server:
-
-	npm run dev
-
-4. Open http://localhost:3000 in your browser.
-
-## Project structure
-
-- `src/app/` — Next.js app routes and pages
-- `src/components/` — Reusable UI components
-- `src/lib/supabase/` — Supabase client, middleware, and server helpers
-- `supabase/migrations/` — Database schema and migrations
-
-## Contributing
-
-Contributions are welcome. Please open an issue to discuss major changes, and submit pull requests for smaller fixes or features. Follow the project's linting and formatting rules.
-
-## License
-
-Specify a license for the project (e.g., MIT).
+For full app documentation, see `bayside-clubs/README.md`.
